@@ -16,6 +16,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/farmers', farmerRoutes);
+app.use('/api/farm', farmRoutes);
 
 // Connect to MongoDB
 connectDB();
