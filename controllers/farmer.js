@@ -1,5 +1,6 @@
 const Farmer = require('../models/farmer');
 const Farm = require('../models/farm');
+const Schedule = require('../models/schedule');
 
 exports.createFarmer = async (req, res) => {
     try {
@@ -32,6 +33,93 @@ exports.getFarmersByCrop = async (req, res) => {
         const farmers = [...new Set(farms.map(farm => farm.farmer))];
 
         res.status(200).json(farmers);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+
+// Calculate Bill of materials
+exports.calculateBillOfMaterials = async (req, res) => {
+    try {
+        const { farmerId } = req.params;
+        const { fertilizerPrices } = req.body;
+
+        // Check if the fertilizerPrices object is provided
+        if (!fertilizerPrices || typeof fertilizerPrices !== 'object') {
+            return res.status(400).json({ error: 'Invalid fertilizer prices' });
+        }
+
+        // Find the farmer by ID
+        const farmer = await Farmer.findById(farmerId);
+        if (!farmer) {
+            return res.status(404).json({ error: 'Farmer not found' });
+        }
+
+        // Find all farms associated with the farmer
+        const farms = await Farm.find({ farmer: farmerId });
+
+        // Find all schedules for the farmer's farms
+        const schedules = await Schedule.find({ farm: { $in: farms.map(farm => farm._id) } });
+
+        // Calculate the total cost for solids and liquids
+        let totalCostSolid = 0;
+        let totalCostLiquid = 0;
+
+        // Calculate the total cost
+        for (const schedule of schedules) {
+            const { fertilizer, quantity, quantityUnit } = schedule;
+            const fertilizerPriceInfo = fertilizerPrices[fertilizer];
+
+            if (!fertilizerPriceInfo || !fertilizerPriceInfo.unit || !fertilizerPriceInfo.price) {
+                // If the price unit or price for the fertilizer is not provided, skip it
+                continue;
+            }
+
+            const priceUnit = fertilizerPriceInfo.unit;
+
+            // Check if the priceUnit and quantityUnit belong to the same unit group
+            const isSolidUnit = ['ton', 'kg', 'g'].includes(quantityUnit);
+            const isLiquidUnit = ['L', 'mL'].includes(quantityUnit);
+            const isSolidPriceUnit = ['ton', 'kg', 'g'].includes(priceUnit);
+            const isLiquidPriceUnit = ['L', 'mL'].includes(priceUnit);
+
+            if ((isSolidUnit && !isSolidPriceUnit) || (isLiquidUnit && !isLiquidPriceUnit)) {
+                return res.status(400).json({ error: `Please provide prices in the correct units for ${fertilizer}` });
+            }
+
+            let price = fertilizerPriceInfo.price;
+
+            // Convert the price to the desired unit
+            if (priceUnit === 'ton') {
+                price /= 1000000; // Convert from grams to tons
+            } else if (priceUnit === 'kg') {
+                price /= 1000; // Convert from grams to kilograms
+            } else if (priceUnit === 'L') {
+                price /= 1000; // Convert from milliliters to liters
+            }
+
+            let unitPrice;
+            switch (quantityUnit) {
+                case 'ton':
+                case 'kg':
+                case 'g':
+                    unitPrice = price * (quantityUnit === 'ton' ? 1000000 : quantityUnit === 'kg' ? 1000 : 1);
+                    totalCostSolid += quantity * unitPrice;
+                    break;
+                case 'L':
+                case 'mL':
+                    unitPrice = price * (quantityUnit === 'L' ? 1000 : 1);
+                    totalCostLiquid += quantity * unitPrice;
+                    break;
+                default:
+                    break; // Skip if the quantity unit is not recognized
+            }
+        }
+
+        res.status(200).json({ totalCostSolid, totalCostLiquid });
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });

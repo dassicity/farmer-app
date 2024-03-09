@@ -21,7 +21,8 @@ const scheduleSchema = new mongoose.Schema({
     farm: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Farm',
-        required: true
+        required: true,
+        unique: true
     },
 });
 

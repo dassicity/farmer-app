@@ -8,5 +8,6 @@ router.get('/crop/:crop', farmerController.getFarmersByCrop);
 
 // POST route
 router.post('/add', farmerController.createFarmer);
+router.post('/:farmerId/bill', farmerController.calculateBillOfMaterials);
 
 module.exports = router;
