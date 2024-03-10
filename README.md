@@ -76,6 +76,10 @@ Refer to the [API Routes Documentation](#complete-api-documentation) section for
 -   [Express.js](https://expressjs.com/) - The web framework used
 -   [MongoDB](https://www.mongodb.com/) - The database used
 
+## Live link
+
+The API is hosted at - https://farmer-app-dper.onrender.com. Use this URL as the base URL before any endpoint.
+
 
 ---
 
