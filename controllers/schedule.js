@@ -28,7 +28,15 @@ exports.createSchedule = async (req, res) => {
 exports.getSchedulesDue = async (req, res) => {
     try {
         const today = new Date();
-        const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        const dayAfterTomorrow = new Date(today);
+        dayAfterTomorrow.setDate(today.getDate() + 2);
+
+        console.log(today);
+        console.log(tomorrow);
 
         // Find all schedules and associated farms
         const schedules = await Schedule.find().populate('farm');
@@ -43,9 +51,12 @@ exports.getSchedulesDue = async (req, res) => {
             const dueDate = new Date(sowingDate);
             dueDate.setDate(sowingDate.getDate() + daysAfterSowing);
 
+            console.log(`Date of sowing - ${sowingDate} -> Due Date - ${dueDate} after ${daysAfterSowing} days after sowing.`)
+
             if (dueDate >= today && dueDate < tomorrow) {
+                console.log(tomorrow);
                 schedulesForToday.push(schedule);
-            } else if (dueDate >= tomorrow && dueDate < tomorrow.setDate(tomorrow.getDate() + 1)) {
+            } else if (dueDate > today && dueDate < dayAfterTomorrow) {
                 schedulesForTomorrow.push(schedule);
             }
         });
