@@ -2,13 +2,41 @@ const Farmer = require('../models/farmer');
 const Farm = require('../models/farm');
 const Schedule = require('../models/schedule');
 
+const Validator = require('validator');
+const isEmpty = require('../utils/is-empty');
+
+
 exports.createFarmer = async (req, res) => {
     try {
         const { phoneNumber, name, language } = req.body;
 
         // Input validation
-        if (!phoneNumber || !name || !language) {
-            return res.status(400).json({ error: 'Missing required fields' });
+        const errors = {};
+
+        // Validate phoneNumber
+        if (isEmpty(phoneNumber)) {
+            errors.phoneNumber = 'Phone number is required';
+        } else if (!Validator.isMobilePhone(phoneNumber.toString())) {
+            errors.phoneNumber = 'Invalid phone number';
+        }
+
+        // Validate name
+        if (isEmpty(name)) {
+            errors.name = 'Name is required';
+        } else if (!Validator.isLength(name, { min: 2, max: 50 })) {
+            errors.name = 'Name must be between 2 and 50 characters';
+        }
+
+        // Validate language
+        if (isEmpty(language)) {
+            errors.language = 'Language is required';
+        } else if (!Validator.isAlpha(language)) {
+            errors.language = 'Language should contain only alphabetic characters';
+        }
+
+        // Check if there are any validation errors
+        if (!isEmpty(errors)) {
+            return res.status(400).json({ errors });
         }
 
         const farmer = new Farmer({ phoneNumber, name, language });

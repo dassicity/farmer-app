@@ -1,13 +1,57 @@
 const Schedule = require('../models/schedule');
 const Farm = require('../models/farm');
 
+const Validator = require('validator');
+const isEmpty = require('../utils/is-empty');
+
 exports.createSchedule = async (req, res) => {
     try {
         const { daysAfterSowing, fertilizer, quantity, quantityUnit, farmId } = req.body;
 
         // Input validation
-        if (!daysAfterSowing || !fertilizer || !quantity || !quantityUnit || !farmId) {
-            return res.status(400).json({ error: 'Missing required fields' });
+        const errors = {};
+
+        // Validate daysAfterSowing
+        if (isEmpty(daysAfterSowing)) {
+            errors.daysAfterSowing = 'Days after sowing is required';
+        } else if (!Validator.isInt(daysAfterSowing.toString(), { min: 1 })) {
+            errors.daysAfterSowing = 'Days after sowing must be a positive integer';
+        }
+
+        // Validate fertilizer
+        if (isEmpty(fertilizer)) {
+            errors.fertilizer = 'Fertilizer is required';
+        } else if (!Validator.isLength(fertilizer, { min: 2, max: 50 })) {
+            errors.fertilizer = 'Fertilizer must be between 2 and 50 characters';
+        }
+
+        // Validate quantity
+        if (isEmpty(quantity)) {
+            errors.quantity = 'Quantity is required';
+        } else if (!Validator.isNumeric(quantity.toString())) {
+            errors.quantity = 'Quantity must be a number';
+        }
+
+        // Validate quantityUnit
+        if (isEmpty(quantityUnit)) {
+            errors.quantityUnit = 'Quantity unit is required';
+        } else {
+            const validUnits = ['ton', 'kg', 'g', 'L', 'mL'];
+            if (!validUnits.includes(quantityUnit)) {
+                errors.quantityUnit = 'Invalid quantity unit';
+            }
+        }
+
+        // Validate farmId
+        if (isEmpty(farmId)) {
+            errors.farmId = 'Farm ID is required';
+        } else if (!Validator.isMongoId(farmId)) {
+            errors.farmId = 'Invalid Farm ID';
+        }
+
+        // Check if there are any validation errors
+        if (!isEmpty(errors)) {
+            return res.status(400).json({ errors });
         }
 
         const farm = await Farm.findById(farmId);
